@@ -1,0 +1,54 @@
+rimeSystem:
+  clusterAutoscaler: ${install_cluster_autoscaler}
+  externalDns: ${install_external_dns}
+  awsLoadBalancerController: ${install_lb_controller}
+  metricsServer: ${install_metrics_server}
+
+aws-load-balancer-controller:
+  image:
+    repository: "${docker_registry}/robustintelligencehq/aws-alb-ingress-controller"
+    tag: "v2.4.2"
+  imagePullSecrets:
+    - name: ${docker_secret_name}
+  clusterName: "${cluster_name}"
+  serviceAccount:
+    create: true
+    annotations:
+      eks.amazonaws.com/role-arn: "${lb_controller_role_arn}"
+  region: "${region}"
+
+cluster-autoscaler:
+  image:
+    repository: "${docker_registry}/robustintelligencehq/cluster-autoscaler"
+    tag: "v1.21.0"
+    pullSecrets:
+      - ${docker_secret_name}
+  autoDiscovery:
+    clusterName: "${cluster_name}"
+  awsRegion: "${region}"
+  rbac:
+    serviceAccount:
+      annotations: {
+        eks.amazonaws.com/role-arn: "${cluster_autoscaler_role_arn}"
+      }
+
+external-dns:
+  image:
+    repository: "${docker_registry}/robustintelligencehq/external-dns"
+    tag: "v0.12.0"
+  imagePullSecrets:
+    - name: ${docker_secret_name}
+  domainFilters:
+%{ for domain in domains ~}
+  - ${domain}
+%{ endfor ~}
+  serviceAccount:
+    annotations:
+      eks.amazonaws.com/role-arn: "${dns_role_arn}"
+
+metrics-server:
+  image:
+    repository: "${docker_registry}/robustintelligencehq/metrics-server"
+    tag: "v0.6.1"
+  imagePullSecrets:
+    - name: ${docker_secret_name}
