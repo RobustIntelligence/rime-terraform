@@ -1,0 +1,63 @@
+rimeExtras:
+  datadog: ${install_datadog}
+  velero: ${install_velero}
+
+datadog:
+  registry: "${docker_registry}"
+  datadog:
+    apiKey: "${datadog_api_key}"
+    tags:
+      - "user:${datadog_user_tag}"
+      - "rime-version:${datadog_rime_version_tag}"
+  agents:
+    image:
+      repository: "robustintelligencehq/datadog-agent"
+      pullSecrets:
+        - name: ${docker_secret_name}
+      tag: 7.32.3
+  clusterAgent:
+    image:
+      repository: "robustintelligencehq/datadog-cluster-agent"
+      pullSecrets:
+        - name: ${docker_secret_name}
+      tag: 1.14.0
+
+velero:
+  image:
+    repository: "${docker_registry}/robustintelligencehq/velero"
+    tag: "v1.6.3"
+    imagePullSecrets:
+      - ${docker_secret_name}
+  initContainers:
+    - name: velero-plugin-for-aws
+      image: "${docker_registry}/robustintelligencehq/velero-plugin-for-aws:v1.2.1"
+      imagePullPolicy: IfNotPresent
+      volumeMounts:
+        - mountPath: /target
+          name: plugins
+  configuration:
+    provider: aws
+    backupStorageLocation:
+      bucket: "${velero_s3_bucket_name}"
+      config:
+        region: "${velero_s3_region}"
+        serverSideEncryption: AES256
+    volumeSnapshotLocation:
+      name: mongodb-snapshots
+      config:
+        region: "${velero_s3_region}"
+  serviceAccount:
+    server:
+      create: true
+      annotations:
+        eks.amazonaws.com/role-arn: "${velero_s3_role_arn}"
+  schedules:
+    mongodb-backup:
+      disabled: false
+      schedule: "${velero_backup_schedule}"
+      useOwnerReferencesInBackup: false
+      template:
+        ttl: "${velero_backup_ttl}"
+        includedResources:
+          - pvc
+          - pv
