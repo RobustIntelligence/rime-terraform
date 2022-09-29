@@ -1,7 +1,7 @@
 locals {
-  is_namespace_default = (var.namespace == "default")
-  mongo_storage_class  = local.is_namespace_default ? "mongo-storage" : "mongo-storage-${var.namespace}"
-  tags                 = join(",", [for key, value in var.tags : "${key}=${value}"])
+  is_namespace_default          = (var.namespace == "default")
+  mongo_storage_class           = local.is_namespace_default ? "mongo-storage" : "mongo-storage-${var.namespace}"
+  tags                          = join(",", [for key, value in var.tags : "${key}=${value}"])
 }
 
 resource "random_password" "jwt_secret" {
@@ -32,8 +32,8 @@ resource "kubernetes_secret" "admin-secrets" {
   }
 
   data = {
-    admin-username = var.admin_username
-    admin-password = var.admin_password
+    admin-username   = var.admin_username
+    admin-password   = var.admin_password
   }
   depends_on = [kubernetes_namespace.namespace]
 }
@@ -44,10 +44,10 @@ module "blob_store" {
 
   count = var.enable_blob_store ? 1 : 0
 
-  namespace            = var.namespace
-  oidc_provider_url    = var.oidc_provider_url
+  namespace = var.namespace
+  oidc_provider_url = var.oidc_provider_url
   resource_name_suffix = var.resource_name_suffix
-  tags                 = var.tags
+  tags = var.tags
 }
 
 // Create permissions to push and manage images in ECR
@@ -56,11 +56,10 @@ module "image_registry" {
 
   count = var.enable_image_registry ? 1 : 0
 
-  namespace            = var.namespace
-  oidc_provider_url    = var.oidc_provider_url
-  repository_prefix    = var.image_registry_config.repo_base_name
+  namespace = var.namespace
+  oidc_provider_url = var.oidc_provider_url
   resource_name_suffix = var.resource_name_suffix
-  tags                 = var.tags
+  tags = var.tags
 }
 
 // Create secret "rimecreds" in each namespace if we created the namespace
@@ -72,11 +71,11 @@ resource "kubernetes_secret" "docker-secrets" {
   data = {
     ".dockerconfigjson" = jsonencode({
       auths = {
-        for creds in var.docker_credentials :
-        creds["docker-server"] => merge(
-          { for k, v in creds : k => v if v != null },
-          { auth = base64encode("${creds["docker-username"]}:${creds["docker-password"]}") },
-        )
+      for creds in var.docker_credentials :
+      creds["docker-server"] => merge(
+      { for k, v in creds : k => v if v != null },
+      { auth = base64encode("${creds["docker-username"]}:${creds["docker-password"]}")},
+      )
       }
     })
   }
@@ -87,44 +86,41 @@ resource "kubernetes_secret" "docker-secrets" {
 # The YAML file created by instantiating `values_tmpl.yaml`.
 resource "local_file" "helm_values" {
   content = templatefile("${path.module}/values_tmpl.yaml", {
-    acm_cert_arn = var.acm_cert_arn
+    acm_cert_arn                    = var.acm_cert_arn
 
-    blob_store_config = {
-      enable         = var.enable_blob_store
+    blob_store_config               = {
+      enable = var.enable_blob_store
       s3_bucket_name = var.enable_blob_store ? module.blob_store[0].blob_store_bucket_arn : ""
       role_arn       = var.enable_blob_store ? module.blob_store[0].blob_store_role_arn : ""
     }
 
-    docker_secret_name  = var.docker_secret_name
-    docker_registry     = var.docker_registry
-    domain              = var.domain == "" ? "placeholder" : var.domain
-    enable_api_key_auth = var.enable_api_key_auth
+    docker_secret_name              = var.docker_secret_name
+    docker_registry                 = var.docker_registry
+    domain                          = var.domain == "" ? "placeholder" : var.domain
+    enable_api_key_auth             = var.enable_api_key_auth
 
     image_registry_config = {
-      registry_type                = var.image_registry_config.enable ? "ecr" : null
-      allow_external_custom_images = true
-      ecr_config = var.image_registry_config.enable ? {
-        registry_id       = module.image_registry[0].ecr_registry_id
-        repository_prefix = module.image_registry[0].unique_repository_prefix
-      } : null
-      image_builder_role_arn = module.image_registry[0].ecr_image_builder_role_arn
-      repo_manager_role_arn  = module.image_registry[0].ecr_repo_manager_role_arn
+      enable                 = var.enable_image_registry
+      registry_id            = var.enable_image_registry ? module.image_registry[0].ecr_registry_id: ""
+      image_builder_role_arn = var.enable_image_registry ? module.image_registry[0].ecr_image_builder_role_arn : ""
+      repo_manager_role_arn  = var.enable_image_registry ? module.image_registry[0].ecr_repo_manager_role_arn : ""
+      repo_base_name         = var.enable_image_registry ?  module.image_registry[0].unique_repository_prefix : ""
     }
 
-    jwt_secret                   = random_password.jwt_secret.result
-    lb_tags                      = length(local.tags) > 0 ? "service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags: \"${local.tags}\"" : ""
-    lb_type                      = var.internal_lbs ? "internal" : "internet-facing"
-    mongo_db_size                = var.mongo_db_size
-    storage_class_name           = var.storage_class_name != "" ? var.storage_class_name : "default"
-    namespace                    = var.namespace
-    pull_policy                  = var.rime_version == "latest" ? "Always" : "IfNotPresent"
-    rime_jwt                     = var.rime_license
-    user_pilot_flow              = var.user_pilot_flow
-    verbose                      = var.verbose
-    version                      = var.rime_version
-    ip_allowlist                 = var.ip_allowlist
-    separate_model_testing_group = var.separate_model_testing_group
-    release_name                 = var.release_name
+    jwt_secret                      = random_password.jwt_secret.result
+    lb_tags                         = length(local.tags) > 0 ? "service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags: \"${local.tags}\"" : ""
+    lb_type                         = var.internal_lbs ? "internal" : "internet-facing"
+    mongo_db_size                   = var.mongo_db_size
+    storage_class_name              = var.storage_class_name != "" ? var.storage_class_name : "default"
+    namespace                       = var.namespace
+    pull_policy                     = var.rime_version == "latest" ? "Always" : "IfNotPresent"
+    rime_jwt                        = var.rime_license
+    user_pilot_flow                 = var.user_pilot_flow
+    verbose                         = var.verbose
+    version                         = var.rime_version
+    ip_allowlist                    = var.ip_allowlist
+    separate_model_testing_group    = var.separate_model_testing_group
+    release_name                    = var.release_name
   })
   filename = format("%s/values_%s.yaml", length(var.helm_values_output_dir) == 0 ? "${path.cwd}" : var.helm_values_output_dir, var.namespace)
 }

@@ -44,3 +44,18 @@ rimeAgent:
 
   launcher:
     requestQueueProxyAddr: ${ request_queue_proxy_addr }
+
+jobMonitor:
+  logArchival:
+    enabled: ${log_archival_config.enable}
+%{if log_archival_config.enable ~}
+    storageBucketName: ${log_archival_config.bucket_name}
+    endpoint: "s3.amazonaws.com"
+    type: "s3"
+  serviceAccount:
+    # Account used by services that need access to blob storage.
+    # This account has special priveleges to read and write to S3 bucket used for blob storage.
+    annotations: {
+      eks.amazonaws.com/role-arn: ${log_archival_config.role_arn}
+    }
+%{ endif ~}

@@ -68,21 +68,13 @@ mongodb:
 
 # The following overrides are AWS specific.
 imageRegistry:
-  create: ${image_registry_config.registry_type != null}
-%{ if image_registry_config.registry_type != null ~}
+  create: ${image_registry_config.enable}
+%{ if image_registry_config.enable ~}
   config:
     imageRegistry:
-%{ if image_registry_config.registry_type == "ecr" ~}
       ecr:
-        registryID: "${image_registry_config.ecr_config.registry_id}"
-        repositoryPrefix: "${image_registry_config.ecr_config.repository_prefix}"
-%{ endif ~}
-%{ if image_registry_config.registry_type == "gar" ~}
-      gar:
-        location: "${image_registry_config.gar_config.location}"
-        project: "${image_registry_config.gar_config.project}"
-        repository: "${image_registry_config.gar_config.repository}"
-%{ endif ~}
+        registryID: "${image_registry_config.registry_id}"
+        repositoryPrefix: "${image_registry_config.repo_base_name}"
   dockerSecretName: "${docker_secret_name}"
   # Specification of the container image used for running the image builder jobs.
   image:
@@ -181,7 +173,6 @@ redis:
   master:
     persistence:
       storageClass: "${storage_class_name}"
-
 
 datasetManager:
   useFileUploadService: ${blob_store_config.enable}
