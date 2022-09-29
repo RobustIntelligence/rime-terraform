@@ -138,3 +138,19 @@ variable "cp_namespace" {
   type        = string
   default     = "default"
 }
+
+variable "log_archival_config" {
+  description = <<EOT
+  The configuration for RIME job log archival. This requires permissions to write to an s3 bucket.
+    * enable:                 whether or not to enable log archival.
+    * bucket_name:            the name of the bucket to store logs in.
+  EOT
+  type = object({
+    enable      = bool
+    bucket_name = string
+  })
+  default = {
+    enable      = false
+    bucket_name = ""
+  }
+}

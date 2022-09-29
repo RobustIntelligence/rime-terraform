@@ -30,7 +30,7 @@ variable "docker_credentials" {
     docker-email=""
   }]
   EOT
-  type        = list(map(string))
+  type = list(map(string))
 }
 
 variable "docker_registry" {
@@ -64,8 +64,8 @@ variable "enable_blob_store" {
 
 variable "enable_image_registry" {
   description = "Whether to use managed image registry for the cluster."
-  type        = bool
-  default     = true
+  type = bool
+  default = true
 }
 
 variable "helm_values_output_dir" {
@@ -99,7 +99,7 @@ variable "image_registry_config" {
   validation {
     condition = (
       !var.image_registry_config.enable ||
-      can(regex("^[a-z][a-z0-9]*(?:[/_-][a-z0-9]+)*$", var.image_registry_config.repo_base_name)   )
+      can(regex("^[a-z][a-z0-9]*(?:[/_-][a-z0-9]+)*$", var.image_registry_config.repo_base_name))
     )
     error_message = "The repository prefix must be 1 or more lowercase alphanumeric words separated by a '-', '_', or '/' where the first character is a letter."
   }
@@ -200,7 +200,7 @@ variable "storage_class_name" {
 }
 
 variable "release_name" {
-  description = "helm release name"
-  type        = string
-  default     = "rime"
-}
+ description = "helm release name"
+   type        = string
+   default     = "rime"
+ }
