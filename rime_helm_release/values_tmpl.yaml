@@ -68,21 +68,13 @@ mongodb:
 
 # The following overrides are AWS specific.
 imageRegistry:
-  create: ${image_registry_config.registry_type != null}
-%{ if image_registry_config.registry_type != null ~}
+  create: ${image_registry_config.enable}
+%{ if image_registry_config.enable ~}
   config:
     imageRegistry:
-%{ if image_registry_config.registry_type == "ecr" ~}
       ecr:
-        registryID: "${image_registry_config.ecr_config.registry_id}"
-        repositoryPrefix: "${image_registry_config.ecr_config.repository_prefix}"
-%{ endif ~}
-%{ if image_registry_config.registry_type == "gar" ~}
-      gar:
-        location: "${image_registry_config.gar_config.location}"
-        project: "${image_registry_config.gar_config.project}"
-        repository: "${image_registry_config.gar_config.repository}"
-%{ endif ~}
+        registryID: "${image_registry_config.registry_id}"
+        repositoryPrefix: "${image_registry_config.repo_base_name}"
   dockerSecretName: "${docker_secret_name}"
   # Specification of the container image used for running the image builder jobs.
   image:
@@ -139,10 +131,12 @@ ingress-nginx:
         service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "tcp"
         service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
         service.beta.kubernetes.io/aws-load-balancer-scheme: "${lb_type}"
-        ${lb_tags}
-  %{ if length(ip_allowlist) > 0 ~}
+%{ if length(lb_tags) > 0 ~}
+      ${lb_tags}
+%{ endif ~}
+%{ if length(ip_allowlist) > 0 ~}
         service.beta.kubernetes.io/aws-load-balancer-target-group-attributes: preserve_client_ip.enabled=true
-  %{ endif ~}
+%{ endif ~}
 
 kong:
   image:
@@ -166,10 +160,12 @@ kong:
       service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
       service.beta.kubernetes.io/aws-load-balancer-scheme: "${lb_type}"
       service.beta.kubernetes.io/aws-load-balancer-alpn-policy: "HTTP2Preferred"
+%{ if length(lb_tags) > 0 ~}
       ${lb_tags}
-  %{ if length(ip_allowlist) > 0 ~}
+%{ endif ~}
+%{ if length(ip_allowlist) > 0 ~}
       service.beta.kubernetes.io/aws-load-balancer-target-group-attributes: preserve_client_ip.enabled=true
-  %{ endif ~}
+%{ endif ~}
 
 redis:
   image:
@@ -182,6 +178,9 @@ redis:
     persistence:
       storageClass: "${storage_class_name}"
 
+databaseSetup:
+  indexCreationHook:
+    backoffLimit: 1
 
 datasetManager:
   useFileUploadService: ${blob_store_config.enable}
