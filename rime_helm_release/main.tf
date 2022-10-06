@@ -47,6 +47,7 @@ module "blob_store" {
   namespace            = var.namespace
   oidc_provider_url    = var.oidc_provider_url
   resource_name_suffix = var.resource_name_suffix
+  force_destroy        = var.force_destroy
   tags                 = var.tags
 }
 
@@ -58,7 +59,6 @@ module "image_registry" {
 
   namespace            = var.namespace
   oidc_provider_url    = var.oidc_provider_url
-  repository_prefix    = var.image_registry_config.repo_base_name
   resource_name_suffix = var.resource_name_suffix
   tags                 = var.tags
 }
@@ -89,9 +89,9 @@ resource "local_file" "helm_values" {
   content = templatefile("${path.module}/values_tmpl.yaml", {
     acm_cert_arn = var.acm_cert_arn
 
-    blob_store_config = {
-      enable         = var.enable_blob_store
-      s3_bucket_name = var.enable_blob_store ? module.blob_store[0].blob_store_bucket_arn : ""
+    blob_store_config               = {
+      enable = var.enable_blob_store
+      s3_bucket_name = var.enable_blob_store ? module.blob_store[0].blob_store_bucket_name : ""
       role_arn       = var.enable_blob_store ? module.blob_store[0].blob_store_role_arn : ""
     }
 
@@ -101,14 +101,11 @@ resource "local_file" "helm_values" {
     enable_api_key_auth = var.enable_api_key_auth
 
     image_registry_config = {
-      registry_type                = var.image_registry_config.enable ? "ecr" : null
-      allow_external_custom_images = true
-      ecr_config = var.image_registry_config.enable ? {
-        registry_id       = module.image_registry[0].ecr_registry_id
-        repository_prefix = module.image_registry[0].unique_repository_prefix
-      } : null
-      image_builder_role_arn = module.image_registry[0].ecr_image_builder_role_arn
-      repo_manager_role_arn  = module.image_registry[0].ecr_repo_manager_role_arn
+      enable                 = var.enable_image_registry
+      registry_id            = var.enable_image_registry ? module.image_registry[0].ecr_registry_id : ""
+      image_builder_role_arn = var.enable_image_registry ? module.image_registry[0].ecr_image_builder_role_arn : ""
+      repo_manager_role_arn  = var.enable_image_registry ? module.image_registry[0].ecr_repo_manager_role_arn : ""
+      repo_base_name         = var.enable_image_registry ? module.image_registry[0].unique_repository_prefix : ""
     }
 
     jwt_secret                   = random_password.jwt_secret.result
