@@ -87,19 +87,19 @@ variable "image_registry_config" {
                                     and managed by the RIME Image Registry service.
   EOT
   type = object({
-    enable            = bool
-    repo_base_name    = string
+    enable         = bool
+    repo_base_name = string
   })
   default = {
-    enable            = true
-    repo_base_name    = "rime-managed-images"
+    enable         = true
+    repo_base_name = "rime-managed-images"
   }
   # See https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-create.html
   # for repository naming rules.
   validation {
     condition = (
       !var.image_registry_config.enable ||
-      can(regex("^[a-z][a-z0-9]*(?:[/_-][a-z0-9]+)*$", var.image_registry_config.repo_base_name)   )
+      can(regex("^[a-z][a-z0-9]*(?:[/_-][a-z0-9]+)*$", var.image_registry_config.repo_base_name))
     )
     error_message = "The repository prefix must be 1 or more lowercase alphanumeric words separated by a '-', '_', or '/' where the first character is a letter."
   }
@@ -203,4 +203,10 @@ variable "release_name" {
   description = "helm release name"
   type        = string
   default     = "rime"
+}
+
+variable "force_destroy" {
+  description = "Whether or not to force destroy the blob store bucket"
+  type        = bool
+  default     = false
 }
