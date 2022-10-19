@@ -2,8 +2,8 @@ data "aws_region" "current" {}
 data "aws_caller_identity" "current" {}
 
 locals {
-  ecr_registry_arn     = "arn:aws:ecr:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}"
-  unique_repository_prefix    = "${var.repository_prefix}/${var.resource_name_suffix}/${var.namespace}"
+  ecr_registry_arn         = "arn:aws:ecr:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}"
+  unique_repository_prefix = "${var.repository_prefix}/${var.resource_name_suffix}/${var.namespace}"
 }
 # This policy depends on the set of S3 paths that our service needs access to
 # supplied by the inputs to our terraform module.
@@ -65,7 +65,7 @@ module "iam_assumable_role_with_oidc_for_ecr_repo_management" {
 
   number_of_role_policy_arns = 1
 
-  oidc_fully_qualified_subjects = [ "system:serviceaccount:${var.namespace}:rime-${var.namespace}-repo-manager"
+  oidc_fully_qualified_subjects = ["system:serviceaccount:${var.namespace}:rime-${var.namespace}-repo-manager"
   ]
 
   tags = var.tags
