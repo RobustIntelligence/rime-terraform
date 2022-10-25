@@ -40,18 +40,18 @@ module "eks" {
       ]
     }, var.server_worker_groups_overrides),
     merge({
-      name                 = "rime-worker-group-model-testing"
-      instance_type        = var.model_testing_worker_group_instance_types[0]
+      name                    = "rime-worker-group-model-testing"
+      instance_type           = var.model_testing_worker_group_instance_types[0]
       override_instance_types = slice(var.model_testing_worker_group_instance_types, 1, length(var.model_testing_worker_group_instance_types))
-      asg_min_size         = var.model_testing_worker_group_min_size
-      asg_desired_capacity = var.model_testing_worker_group_min_size
-      asg_max_size         = var.model_testing_worker_group_max_size
+      asg_min_size            = var.model_testing_worker_group_min_size
+      asg_desired_capacity    = var.model_testing_worker_group_min_size
+      asg_max_size            = var.model_testing_worker_group_max_size
       # Mixed Instance Policy Configurations. May need to tune. Currently we either use all spot or all on-demand.
       # Mixed Instance Policy docs: https://docs.aws.amazon.com/autoscaling/ec2/APIReference/API_MixedInstancesPolicy.html
-      on_demand_base_capacity = "0"
+      on_demand_base_capacity                  = "0"
       on_demand_percentage_above_base_capacity = var.model_testing_worker_group_use_spot ? "0" : "100"
-      spot_allocation_strategy = "lowest-price"
-      kubelet_extra_args   = "--node-labels=node.kubernetes.io/lifecycle=${var.model_testing_worker_group_use_spot ? "spot" : "normal"},dedicated=model-testing --register-with-taints=dedicated=model-testing:NoSchedule"
+      spot_allocation_strategy                 = "lowest-price"
+      kubelet_extra_args                       = "--node-labels=node.kubernetes.io/lifecycle=${var.model_testing_worker_group_use_spot ? "spot" : "normal"},dedicated=model-testing --register-with-taints=dedicated=model-testing:NoSchedule"
 
       tags = [
         {
@@ -185,7 +185,7 @@ module "iam_assumable_role_with_oidc_for_ebs_controller" {
 }
 
 resource "aws_eks_addon" "ebs_csi_driver" {
-  cluster_name = module.eks.cluster_id
-  addon_name   = "aws-ebs-csi-driver"
+  cluster_name             = module.eks.cluster_id
+  addon_name               = "aws-ebs-csi-driver"
   service_account_role_arn = module.iam_assumable_role_with_oidc_for_ebs_controller.this_iam_role_arn
 }
