@@ -34,7 +34,7 @@ variable "docker_credentials" {
     docker-email=""
   }]
   EOT
-  type = list(map(string))
+  type        = list(map(string))
 }
 
 variable "docker_registry" {
