@@ -47,6 +47,7 @@ module "blob_store" {
   namespace            = var.namespace
   oidc_provider_url    = var.oidc_provider_url
   resource_name_suffix = var.resource_name_suffix
+  force_destroy        = var.force_destroy
   tags                 = var.tags
 }
 
@@ -89,9 +90,9 @@ resource "local_file" "helm_values" {
   content = templatefile("${path.module}/values_tmpl.yaml", {
     acm_cert_arn = var.acm_cert_arn
 
-    blob_store_config = {
-      enable         = var.enable_blob_store
-      s3_bucket_name = var.enable_blob_store ? module.blob_store[0].blob_store_bucket_arn : ""
+    blob_store_config               = {
+      enable = var.enable_blob_store
+      s3_bucket_name = var.enable_blob_store ? module.blob_store[0].blob_store_bucket_name : ""
       role_arn       = var.enable_blob_store ? module.blob_store[0].blob_store_role_arn : ""
     }
 
