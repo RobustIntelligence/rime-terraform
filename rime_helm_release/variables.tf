@@ -34,7 +34,7 @@ variable "docker_credentials" {
 }
 
 variable "docker_registry" {
-  description = "The name of the docker registry holding all of the chart images"
+  description = "The name of the Docker registry that holds the chart images"
   type        = string
   default     = "docker.io"
 }
@@ -87,19 +87,19 @@ variable "image_registry_config" {
                                     and managed by the RIME Image Registry service.
   EOT
   type = object({
-    enable            = bool
-    repo_base_name    = string
+    enable         = bool
+    repo_base_name = string
   })
   default = {
-    enable            = true
-    repo_base_name    = "rime-managed-images"
+    enable         = true
+    repo_base_name = "rime-managed-images"
   }
   # See https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-create.html
   # for repository naming rules.
   validation {
     condition = (
       !var.image_registry_config.enable ||
-      can(regex("^[a-z][a-z0-9]*(?:[/_-][a-z0-9]+)*$", var.image_registry_config.repo_base_name)   )
+      can(regex("^[a-z][a-z0-9]*(?:[/_-][a-z0-9]+)*$", var.image_registry_config.repo_base_name))
     )
     error_message = "The repository prefix must be 1 or more lowercase alphanumeric words separated by a '-', '_', or '/' where the first character is a letter."
   }
@@ -162,9 +162,10 @@ variable "internal_lbs" {
 }
 
 variable "ip_allowlist" {
-  # Note: external client IP's are preserved by load balancer. You may also want to include the external IP for the
-  # cluster on the allowlist if OIDC is being used, since OIDC will make a callback to the auth-server using that IP.
-  description = "CIDR's to add to allowlist for all ingresses. If not specified, all IP's are allowed."
+  # Note: external client IP addresses are preserved by the load balancer. You may also want to include the external IP
+  # address for the cluster on the allowlist if OIDC is being used, since OIDC will make a callback to the auth-server
+  # using that IP address.
+  description = "A set of CIDR routes to add to the allowlist for all ingresses. If not specified, all IP addresses are allowed."
   type        = list(string)
   default     = []
 }
@@ -203,4 +204,39 @@ variable "release_name" {
   description = "helm release name"
   type        = string
   default     = "rime"
+}
+
+variable "force_destroy" {
+  description = "Whether or not to force destroy the blob store bucket"
+  type        = bool
+  default     = false
+}
+
+variable "cloud_platform_config" {
+  description = "A configuration that is specific to the cloud platform being used"
+  type = object({
+    platform_type = string
+    aws_config    = object({})
+    gcp_config = object({
+      location      = string
+      project       = string
+      node_sa_email = string
+    })
+  })
+  validation {
+    condition = (
+      (
+        var.cloud_platform_config.platform_type == "aws" && (
+          var.cloud_platform_config.aws_config != null &&
+          var.cloud_platform_config.gcp_config == null
+        )
+        ) || (
+        var.cloud_platform_config.platform_type == "gcp" && (
+          var.cloud_platform_config.aws_config == null &&
+          var.cloud_platform_config.gcp_config != null
+        )
+      )
+    )
+    error_message = "you must specify a cloud platform type in {'aws', 'gcp'} and only its accompanying parameters"
+  }
 }

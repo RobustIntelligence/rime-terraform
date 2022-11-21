@@ -7,7 +7,7 @@ terraform {
       version = ">= 3.20.0, < 4.0.0"
     }
 
-    kubernetes =  {
+    kubernetes = {
       source  = "hashicorp/kubernetes"
       version = ">= 2.0.1, < 3.0.0"
     }

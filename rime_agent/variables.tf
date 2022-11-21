@@ -117,7 +117,7 @@ variable "model_test_job_config_map" {
 }
 
 variable "docker_registry" {
-  description = "The name of the docker registry holding all of the chart images"
+  description = "The name of the Docker registry that holds the chart images"
   type        = string
   default     = "docker.io"
 }
@@ -137,4 +137,20 @@ variable "cp_namespace" {
   description = "Namespace where the control plane helm chart is installed. Used to determine addresses."
   type        = string
   default     = "default"
+}
+
+variable "log_archival_config" {
+  description = <<EOT
+  The configuration for RIME job log archival. This requires permissions to write to an s3 bucket.
+    * enable:                 whether or not to enable log archival.
+    * bucket_name:            the name of the bucket to store logs in.
+  EOT
+  type = object({
+    enable      = bool
+    bucket_name = string
+  })
+  default = {
+    enable      = false
+    bucket_name = ""
+  }
 }

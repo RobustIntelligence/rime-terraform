@@ -8,8 +8,8 @@ resource "local_file" "rime_extras" {
     datadog_api_key          = var.datadog_api_key
     datadog_rime_version_tag = var.rime_version
     datadog_user_tag         = var.rime_user
-    docker_registry         = var.docker_registry
-    docker_secret_name      = var.docker_secret_name
+    docker_registry          = var.docker_registry
+    docker_secret_name       = var.docker_secret_name
     install_datadog          = var.install_datadog
     install_velero           = var.install_velero
     velero_s3_bucket_name    = var.install_velero ? aws_s3_bucket.velero_s3_bucket[0].bucket : ""
@@ -65,11 +65,11 @@ resource "kubernetes_secret" "docker-secrets" {
   data = {
     ".dockerconfigjson" = jsonencode({
       auths = {
-      for creds in var.docker_credentials :
-      creds["docker-server"] => merge(
-                                  { for k, v in creds : k => v if v != null },
-                                  { auth = base64encode("${creds["docker-username"]}:${creds["docker-password"]}")},
-                                )
+        for creds in var.docker_credentials :
+        creds["docker-server"] => merge(
+          { for k, v in creds : k => v if v != null },
+          { auth = base64encode("${creds["docker-username"]}:${creds["docker-password"]}") },
+        )
       }
     })
   }
