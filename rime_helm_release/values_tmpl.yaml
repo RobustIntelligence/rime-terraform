@@ -9,6 +9,7 @@ rime:
 %{ endif ~}
   enableApiKeyAuth: ${enable_api_key_auth}
   separateModelTestingGroup: ${separate_model_testing_group}
+  datadogTagPodAnnotation: '${datadog_tag_pod_annotation}'
 
 userpilotFlow: ${user_pilot_flow}
 rimeJwt: ${rime_jwt}
@@ -72,6 +73,8 @@ imageRegistry:
 %{ if image_registry_config.registry_type != null ~}
   config:
     imageRegistry:
+      baseImage:
+        name: "${docker_registry}/robustintelligencehq/rime-base-wheel"
 %{ if image_registry_config.registry_type == "ecr" ~}
       ecr:
         registryID: "${image_registry_config.ecr_config.registry_id}"
@@ -93,13 +96,13 @@ imageRegistry:
       # Annotations required to associate the image registry server account
       # with the AWS IAM role used to create, access and modify RIME's ECR repositories.
       annotations: {
-        eks.amazonaws.com/role-arn: ${image_registry_config.repo_manager_role_arn}
+        ${image_registry_config.managed-image-repo-admin-annotation}
       }
     jobAccount:
       # Annotations required to associate the image builder job account
       # with the AWS IAM role used to push and pull images to RIME's ECR repositories.
       annotations: {
-        eks.amazonaws.com/role-arn: ${image_registry_config.image_builder_role_arn}
+        ${image_registry_config.managed-image-repo-builder-annotation}
       }
 %{ endif ~}
 
@@ -125,8 +128,8 @@ ingress-nginx:
     image:
       registry: "${docker_registry}"
       image: "robustintelligencehq/ingress-nginx-controller"
-      tag: "v1.3.0"
-      digest: "sha256:067673df26a65ec5c2d5b30f25db869bad4d7d391fc81882250134577e581ef0"
+      tag: "v1.3.1"
+      digest: "sha256:d3642f55a6a7a102a9a579b3382fe73869c73890de4c94f28e36ba5e07925944"
     scope:
       enabled: true
       namespace: ${namespace}
@@ -139,10 +142,12 @@ ingress-nginx:
         service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "tcp"
         service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
         service.beta.kubernetes.io/aws-load-balancer-scheme: "${lb_type}"
-        ${lb_tags}
-  %{ if length(ip_allowlist) > 0 ~}
+%{ if length(lb_tags) > 0 ~}
+      ${lb_tags}
+%{ endif ~}
+%{ if length(ip_allowlist) > 0 ~}
         service.beta.kubernetes.io/aws-load-balancer-target-group-attributes: preserve_client_ip.enabled=true
-  %{ endif ~}
+%{ endif ~}
 
 kong:
   image:
@@ -166,10 +171,12 @@ kong:
       service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
       service.beta.kubernetes.io/aws-load-balancer-scheme: "${lb_type}"
       service.beta.kubernetes.io/aws-load-balancer-alpn-policy: "HTTP2Preferred"
+%{ if length(lb_tags) > 0 ~}
       ${lb_tags}
-  %{ if length(ip_allowlist) > 0 ~}
+%{ endif ~}
+%{ if length(ip_allowlist) > 0 ~}
       service.beta.kubernetes.io/aws-load-balancer-target-group-attributes: preserve_client_ip.enabled=true
-  %{ endif ~}
+%{ endif ~}
 
 redis:
   image:
@@ -182,6 +189,9 @@ redis:
     persistence:
       storageClass: "${storage_class_name}"
 
+databaseSetup:
+  indexCreationHook:
+    backoffLimit: 1
 
 datasetManager:
   useFileUploadService: ${blob_store_config.enable}
