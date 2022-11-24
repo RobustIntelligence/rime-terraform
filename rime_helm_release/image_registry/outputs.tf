@@ -1,15 +1,18 @@
-output "ecr_repo_manager_role_arn" {
-  value = module.iam_assumable_role_with_oidc_for_ecr_repo_management.this_iam_role_arn
-}
-
-output "ecr_image_builder_role_arn" {
-  value = module.iam_assumable_role_with_oidc_for_ecr_image_builder.this_iam_role_arn
-}
-
-output "ecr_registry_id" {
-  value = data.aws_caller_identity.current.account_id
-}
-
-output "unique_repository_prefix" {
-  value = local.unique_repository_prefix
+output "image_registry_config" {
+  value = {
+    registry_type                = local.registry_type
+    allow_external_custom_images = true
+    ecr_config                   = local.is_ecr ? module.ecr[0].ecr_config : null
+    gar_config                   = local.is_gar ? module.gar[0].gar_config : null
+    managed-image-repo-builder-annotation = (
+      local.is_ecr ? module.ecr[0].managed-image-repo-builder-annotation : (
+        local.is_gar ? module.gar[0].managed-image-repo-builder-annotation : ""
+      )
+    )
+    managed-image-repo-admin-annotation = (
+      local.is_ecr ? module.ecr[0].managed-image-repo-admin-annotation : (
+        local.is_gar ? module.gar[0].managed-image-repo-admin-annotation : ""
+      )
+    )
+  }
 }
