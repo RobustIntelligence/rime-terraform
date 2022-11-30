@@ -36,6 +36,7 @@ external-dns:
   image:
     repository: "${docker_registry}/robustintelligencehq/external-dns"
     tag: "v0.12.0"
+  txtOwnerId: ${cluster_name}
   imagePullSecrets:
     - name: ${docker_secret_name}
   domainFilters:
