@@ -1,7 +1,7 @@
 resource "aws_iam_policy" "aws_load_balancer_controller_iam_policy" {
   count = var.install_lb_controller ? 1 : 0
-  name = "aws_load_balancer_controller_policy_${var.resource_name_suffix}"
-  path = "/"
+  name  = "aws_load_balancer_controller_policy_${var.resource_name_suffix}"
+  path  = "/"
 
   # Source: `https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.2.0/docs/install/iam_policy.json`
   policy = <<-POLICY
@@ -217,7 +217,7 @@ resource "aws_iam_policy" "aws_load_balancer_controller_iam_policy" {
 }
 
 module "iam_assumable_role_with_oidc_for_load_balancer_controller" {
-  count = var.install_lb_controller ? 1 : 0
+  count   = var.install_lb_controller ? 1 : 0
   source  = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
   version = "~> 3.0"
 
