@@ -9,9 +9,9 @@ locals {
 }
 
 resource "aws_s3_bucket" "s3_blob_store_bucket" {
-  bucket = "rime-blob-${local.bucket_suffix}" # must be <= 63
-
-  tags = var.tags
+  bucket        = "rime-blob-${local.bucket_suffix}" # must be <= 63
+  force_destroy = var.force_destroy
+  tags          = var.tags
 }
 
 resource "aws_s3_bucket_versioning" "s3_blob_store_bucket" {
@@ -71,7 +71,7 @@ data "aws_iam_policy_document" "s3_blob_store_access_policy_document" {
 }
 
 resource "aws_iam_policy" "s3_blob_store_access_policy" {
-  name  = "rime_blob_policy_${local.bucket_suffix}" # must be <= 128
+  name = "rime_blob_policy_${local.bucket_suffix}" # must be <= 128
 
   policy = data.aws_iam_policy_document.s3_blob_store_access_policy_document.json
 
