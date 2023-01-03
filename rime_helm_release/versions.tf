@@ -1,11 +1,10 @@
 terraform {
   required_version = "> 0.14, < 2.0.0"
-  // Adds `optional` as a type constraint for variable declations.
-  // This feature was added experimentally in 0.14.0 (2020-12-02):
-  //   https://github.com/hashicorp/terraform/releases/tag/v0.14.0
-  // This feature became non-experimental in 1.3.0 (21-09-2022):
-  //   https://github.com/hashicorp/terraform/releases/tag/v1.3.0
-  experiments      = [module_variable_optional_attrs]
+  // DO NOT USE experiment module_variable_optional_attrs.  It is not compatible
+  // with future versions of terraform >= 1.3.0
+  //
+  // TODO(11974): allow for optional() variable declarations by requiring
+  // a version >= 1.3.0.
 
   required_providers {
     helm = {
