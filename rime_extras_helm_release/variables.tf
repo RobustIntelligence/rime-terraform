@@ -26,11 +26,11 @@ variable "docker_credentials" {
     docker-email=""
   }]]
   EOT
-  type = list(map(string))
+  type        = list(map(string))
 }
 
 variable "docker_registry" {
-  description = "The name of the docker registry holding all of the chart images"
+  description = "The name of the Docker registry that holds the chart images"
   type        = string
   default     = "docker.io"
 }

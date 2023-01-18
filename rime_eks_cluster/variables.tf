@@ -16,6 +16,12 @@ variable "cluster_version" {
   default     = "1.23"
 }
 
+variable "public_cluster_endpoint" {
+  description = "Whether or not there should be a public cluster endpoint."
+  type        = bool
+  default     = true
+}
+
 variable "eks_cluster_node_iam_policies" {
   description = "Policies to attach to eks worker nodes."
   type        = list(string)
@@ -74,7 +80,7 @@ variable "model_testing_worker_group_max_size" {
 }
 
 variable "model_testing_worker_groups_overrides" {
-  description = "A dict of overrides for the model testing worker group launch templates. See https://github.com/terraform-aws-modules/terraform-aws-eks/blob/v17.24.0/locals.tf#L36 for valid values."
+  description = "A dictionary that specifies overrides for the model testing worker group launch templates. See https://github.com/terraform-aws-modules/terraform-aws-eks/blob/v17.24.0/locals.tf#L36 for valid values."
   type        = any
   default     = {}
 }
@@ -115,7 +121,7 @@ variable "server_worker_group_max_size" {
 }
 
 variable "server_worker_groups_overrides" {
-  description = "A dict of overrides for the server worker group launch templates. See https://github.com/terraform-aws-modules/terraform-aws-eks/blob/v17.24.0/locals.tf#L36 for valid values."
+  description = "A dictionary that specifies overrides for the server worker group launch templates. See https://github.com/terraform-aws-modules/terraform-aws-eks/blob/v17.24.0/locals.tf#L36 for valid values."
   type        = any
   default     = {}
 }
