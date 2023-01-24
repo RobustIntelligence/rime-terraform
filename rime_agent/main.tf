@@ -72,6 +72,12 @@ resource "local_file" "terraform_provided_values" {
     request_queue_proxy_addr            = "${var.cp_release_name}-request-queue-proxy.${var.cp_namespace}:5014"
     model_test_job_service_account_name = local.model_test_job_service_account_name
     model_test_job_config_map           = var.model_test_job_config_map
+    datadog_tag_pod_annotation          = var.datadog_tag_pod_annotation
+    log_archival_config = {
+      enable      = var.log_archival_config.enable
+      bucket_name = var.log_archival_config.bucket_name
+      role_arn    = var.log_archival_config.enable ? module.iam_assumable_role_with_oidc_for_log_archival[0].this_iam_role_arn : ""
+    }
   })
   filename = format("%s/rime_agent_values_terraform_%s.yaml", local.output_dir, var.namespace)
 }
