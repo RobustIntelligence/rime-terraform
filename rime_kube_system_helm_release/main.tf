@@ -1,3 +1,5 @@
+data "aws_partition" "current" {}
+
 data "aws_region" "current" {}
 
 locals {
@@ -6,6 +8,7 @@ locals {
 
 // Create secret "rimecreds" in each namespace if we created the namespace
 resource "kubernetes_secret" "docker-secrets" {
+  count = var.manage_namespace ? 1 : 0
   metadata {
     name      = var.docker_secret_name
     namespace = "kube-system"
@@ -13,15 +16,15 @@ resource "kubernetes_secret" "docker-secrets" {
   data = {
     ".dockerconfigjson" = jsonencode({
       auths = {
-      for creds in var.docker_credentials :
+        for creds in var.docker_credentials :
         creds["docker-server"] => merge(
-                                    { for k, v in creds : k => v if v != null },
-                                    { auth = base64encode("${creds["docker-username"]}:${creds["docker-password"]}")},
-                                  )
+          { for k, v in creds : k => v if v != null },
+          { auth = base64encode("${creds["docker-username"]}:${creds["docker-password"]}") },
+        )
       }
     })
   }
-  type       = "kubernetes.io/dockerconfigjson"
+  type = "kubernetes.io/dockerconfigjson"
 }
 
 # The YAML file created by instantiating `values_tmpl.yaml`.

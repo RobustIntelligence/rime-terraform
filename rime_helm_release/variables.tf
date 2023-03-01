@@ -33,8 +33,35 @@ variable "docker_credentials" {
   type        = list(map(string))
 }
 
+variable "docker_image_names" {
+  description = <<EOT
+  The configuration for the docker images used to run rime, each of which
+  is in the docker registry specified by `docker_registry`. These image names
+  serve the following purpose.
+    * backend:            the image for RIME's backend services.
+    * frontend:           the image for RIME's frontend services.
+    * image_builder:      the image used to build new RIME wheel images for managed images.
+    * base_rime_image:    the base RIME wheel image upon which new managed images are built.
+    * default_rime_image: the default RIME wheel image used for model tests.    
+  EOT
+  type = object({
+    backend = string
+    frontend = string
+    image_builder = string
+    base_rime_image = string
+    default_rime_image = string
+  })
+  default = {
+    backend = "robustintelligencehq/rime-backend"
+    frontend = "robustintelligencehq/rime-frontend"
+    image_builder = "robustintelligencehq/rime-image-builder"
+    base_rime_image = "robustintelligencehq/rime-base-wheel"
+    default_rime_image = "robustintelligencehq/rime-testing-engine-dev"
+  }
+}
+
 variable "docker_registry" {
-  description = "The name of the docker registry holding all of the chart images"
+  description = "The name of the Docker registry that holds the chart images"
   type        = string
   default     = "docker.io"
 }
@@ -56,14 +83,44 @@ variable "enable_api_key_auth" {
   default     = true
 }
 
-variable "enable_blob_store" {
-  description = "Whether to use blob store for the cluster."
+variable "disable_vault_tls" {
+  description = "disable tls for vault"
+  type        = bool
+  default     = false
+}
+
+variable "enable_mongo_tls" {
+  description = "enable tls for mongo"
   type        = bool
   default     = true
 }
 
-variable "enable_image_registry" {
-  description = "Whether to use managed image registry for the cluster."
+variable "enable_redis_tls" {
+  description = "enable tls for redis"
+  type        = bool
+  default     = true
+}
+
+variable "enable_rest_tls" {
+  description = "enable tls for rest"
+  type        = bool
+  default     = true
+}
+
+variable "enable_grpc_tls" {
+  description = "enable tls for grpc"
+  type        = bool
+  default     = true
+}
+
+variable "enable_crossplane_tls" {
+  description = "enable tls for crossplane"
+  type        = bool
+  default     = true
+}
+
+variable "enable_blob_store" {
+  description = "Whether to use blob store for the cluster."
   type        = bool
   default     = true
 }
@@ -87,22 +144,33 @@ variable "image_registry_config" {
                                     and managed by the RIME Image Registry service.
   EOT
   type = object({
-    enable            = bool
-    repo_base_name    = string
+    enable         = bool
+    repo_base_name = string
   })
   default = {
-    enable            = true
-    repo_base_name    = "rime-managed-images"
+    enable         = true
+    repo_base_name = "rime-managed-images"
   }
   # See https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-create.html
   # for repository naming rules.
   validation {
     condition = (
       !var.image_registry_config.enable ||
-      can(regex("^[a-z][a-z0-9]*(?:[/_-][a-z0-9]+)*$", var.image_registry_config.repo_base_name)   )
+      can(regex("^[a-z][a-z0-9]*(?:[/_-][a-z0-9]+)*$", var.image_registry_config.repo_base_name))
     )
     error_message = "The repository prefix must be 1 or more lowercase alphanumeric words separated by a '-', '_', or '/' where the first character is a letter."
   }
+}
+
+variable "manage_namespace" {
+  description = <<EOT
+  Whether or not to manage the namespace we are installing into.
+  This will create the namespace(if applicable), setup docker credentials as a
+  kubernetes secret etc. Turn this flag off if you have trouble connecting to
+  k8s from your terraform environment.
+  EOT
+  type        = bool
+  default     = true
 }
 
 variable "namespace" {
@@ -162,9 +230,10 @@ variable "internal_lbs" {
 }
 
 variable "ip_allowlist" {
-  # Note: external client IP's are preserved by load balancer. You may also want to include the external IP for the
-  # cluster on the allowlist if OIDC is being used, since OIDC will make a callback to the auth-server using that IP.
-  description = "CIDR's to add to allowlist for all ingresses. If not specified, all IP's are allowed."
+  # Note: external client IP addresses are preserved by the load balancer. You may also want to include the external IP
+  # address for the cluster on the allowlist if OIDC is being used, since OIDC will make a callback to the auth-server
+  # using that IP address.
+  description = "A set of CIDR routes to add to the allowlist for all ingresses. If not specified, all IP addresses are allowed."
   type        = list(string)
   default     = []
 }
@@ -203,4 +272,63 @@ variable "release_name" {
   description = "helm release name"
   type        = string
   default     = "rime"
+}
+
+variable "datadog_tag_pod_annotation" {
+  description = "Pod annotation for Datadog tagging. Must be a string in valid JSON format, e.g. {\"tag\": \"val\"}."
+  type        = string
+  default     = ""
+}
+
+variable "force_destroy" {
+  description = "Whether or not to force destroy the blob store bucket"
+  type        = bool
+  default     = false
+}
+
+variable "cloud_platform_config" {
+  description = "A configuration that is specific to the cloud platform being used"
+  type = object({
+    platform_type = string
+    aws_config    = object({})
+    gcp_config = object({
+      location      = string
+      project       = string
+      node_sa_email = string
+    })
+  })
+  validation {
+    condition = (
+      (
+        var.cloud_platform_config.platform_type == "aws" && (
+          var.cloud_platform_config.aws_config != null &&
+          var.cloud_platform_config.gcp_config == null
+        )
+        ) || (
+        var.cloud_platform_config.platform_type == "gcp" && (
+          var.cloud_platform_config.aws_config == null &&
+          var.cloud_platform_config.gcp_config != null
+        )
+      )
+    )
+    error_message = "you must specify a cloud platform type in {'aws', 'gcp'} and only its accompanying parameters"
+  }
+}
+
+variable "override_values_file_path" {
+  description = <<EOT
+  Optional file path to override values file for the rime helm release.
+  Values produced by the terraform module will take precedence over these values.
+  EOT
+  type        = string
+  default     = ""
+}
+
+variable "enable_external_agent" {
+  description = <<EOT
+  Whether or not to enable external agent access to your cluster. This will spin
+  up an additional load balancer to handle grpc requests.
+  EOT
+  type        = bool
+  default     = false
 }

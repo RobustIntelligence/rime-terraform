@@ -24,7 +24,7 @@ module "s3_iam" {
 
 // Create namespace, only if enabled.
 resource "kubernetes_namespace" "auto" {
-  count = var.create_k8s_namespace ? 1 : 0
+  count = var.manage_namespace ? 1 : 0
   metadata {
     name = var.namespace
     labels = {
@@ -35,7 +35,7 @@ resource "kubernetes_namespace" "auto" {
 
 // Create secret "rimecreds" in each namespace if we created the namespace
 resource "kubernetes_secret" "docker-secrets" {
-  count = var.create_k8s_namespace ? 1 : 0
+  count = var.manage_namespace ? 1 : 0
   metadata {
     name      = var.docker_secret_name
     namespace = var.namespace
@@ -63,15 +63,26 @@ resource "local_file" "terraform_provided_values" {
     s3_reader_role_arn                  = module.s3_iam.s3_reader_role_arn
     docker_registry                     = var.docker_registry
     image_pull_secret_name              = var.docker_secret_name
+    enable_crossplane_tls               = var.enable_crossplane_tls
     firewall_server_addr                = "${var.cp_release_name}-firewall-server.${var.cp_namespace}:5002"
     data_collector_addr                 = "${var.cp_release_name}-data-collector-server.${var.cp_namespace}:5015"
-    grpc_web_server_addr                = "${var.cp_release_name}-grpc-web-server.${var.cp_namespace}:5011"
+    web_server_addr                     = "${var.cp_release_name}-web-server.${var.cp_namespace}:5011"
     job_manager_server_addr             = "${var.cp_release_name}-upload-server.${var.cp_namespace}:5000"
     agent_manager_server_addr           = "${var.cp_release_name}-agent-manager-server.${var.cp_namespace}:5016"
     upload_server_addr                  = "${var.cp_release_name}-upload-server.${var.cp_namespace}:5000"
     request_queue_proxy_addr            = "${var.cp_release_name}-request-queue-proxy.${var.cp_namespace}:5014"
+    firewall_server_rest_addr           = "${var.cp_release_name}-firewall-server.${var.cp_namespace}:15002"
+    data_collector_rest_addr            = "${var.cp_release_name}-data-collector-server.${var.cp_namespace}:15015"
+    upload_server_rest_addr             = "${var.cp_release_name}-upload-server.${var.cp_namespace}:15001"
+    dataset_manager_server_rest_addr    = "${var.cp_release_name}-dataset-manager-server.${var.cp_namespace}:15009"
     model_test_job_service_account_name = local.model_test_job_service_account_name
     model_test_job_config_map           = var.model_test_job_config_map
+    datadog_tag_pod_annotation          = var.datadog_tag_pod_annotation
+    log_archival_config = {
+      enable      = var.log_archival_config.enable
+      bucket_name = var.log_archival_config.bucket_name
+      role_arn    = var.log_archival_config.enable ? module.iam_assumable_role_with_oidc_for_log_archival[0].this_iam_role_arn : ""
+    }
   })
   filename = format("%s/rime_agent_values_terraform_%s.yaml", local.output_dir, var.namespace)
 }

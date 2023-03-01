@@ -1,7 +1,7 @@
 resource "aws_iam_policy" "aws_load_balancer_controller_iam_policy" {
   count = var.install_lb_controller ? 1 : 0
-  name = "aws_load_balancer_controller_policy_${var.resource_name_suffix}"
-  path = "/"
+  name  = "aws_load_balancer_controller_policy_${var.resource_name_suffix}"
+  path  = "/"
 
   # Source: `https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.2.0/docs/install/iam_policy.json`
   policy = <<-POLICY
@@ -80,7 +80,7 @@ resource "aws_iam_policy" "aws_load_balancer_controller_iam_policy" {
       "Action": [
         "ec2:CreateTags"
       ],
-      "Resource": "arn:aws:ec2:*:*:security-group/*",
+      "Resource": "arn:${data.aws_partition.current.partition}:ec2:*:*:security-group/*",
       "Condition": {
         "StringEquals": {
           "ec2:CreateAction": "CreateSecurityGroup"
@@ -96,7 +96,7 @@ resource "aws_iam_policy" "aws_load_balancer_controller_iam_policy" {
         "ec2:CreateTags",
         "ec2:DeleteTags"
       ],
-      "Resource": "arn:aws:ec2:*:*:security-group/*",
+      "Resource": "arn:${data.aws_partition.current.partition}:ec2:*:*:security-group/*",
       "Condition": {
         "Null": {
           "aws:RequestTag/elbv2.k8s.aws/cluster": "true",
@@ -148,9 +148,9 @@ resource "aws_iam_policy" "aws_load_balancer_controller_iam_policy" {
         "elasticloadbalancing:RemoveTags"
       ],
       "Resource": [
-        "arn:aws:elasticloadbalancing:*:*:targetgroup/*/*",
-        "arn:aws:elasticloadbalancing:*:*:loadbalancer/net/*/*",
-        "arn:aws:elasticloadbalancing:*:*:loadbalancer/app/*/*"
+        "arn:${data.aws_partition.current.partition}:elasticloadbalancing:*:*:targetgroup/*/*",
+        "arn:${data.aws_partition.current.partition}:elasticloadbalancing:*:*:loadbalancer/net/*/*",
+        "arn:${data.aws_partition.current.partition}:elasticloadbalancing:*:*:loadbalancer/app/*/*"
       ],
       "Condition": {
         "Null": {
@@ -166,10 +166,10 @@ resource "aws_iam_policy" "aws_load_balancer_controller_iam_policy" {
         "elasticloadbalancing:RemoveTags"
       ],
       "Resource": [
-        "arn:aws:elasticloadbalancing:*:*:listener/net/*/*/*",
-        "arn:aws:elasticloadbalancing:*:*:listener/app/*/*/*",
-        "arn:aws:elasticloadbalancing:*:*:listener-rule/net/*/*/*",
-        "arn:aws:elasticloadbalancing:*:*:listener-rule/app/*/*/*"
+        "arn:${data.aws_partition.current.partition}:elasticloadbalancing:*:*:listener/net/*/*/*",
+        "arn:${data.aws_partition.current.partition}:elasticloadbalancing:*:*:listener/app/*/*/*",
+        "arn:${data.aws_partition.current.partition}:elasticloadbalancing:*:*:listener-rule/net/*/*/*",
+        "arn:${data.aws_partition.current.partition}:elasticloadbalancing:*:*:listener-rule/app/*/*/*"
       ]
     },
     {
@@ -197,7 +197,7 @@ resource "aws_iam_policy" "aws_load_balancer_controller_iam_policy" {
         "elasticloadbalancing:RegisterTargets",
         "elasticloadbalancing:DeregisterTargets"
       ],
-      "Resource": "arn:aws:elasticloadbalancing:*:*:targetgroup/*/*"
+      "Resource": "arn:${data.aws_partition.current.partition}:elasticloadbalancing:*:*:targetgroup/*/*"
     },
     {
       "Effect": "Allow",
@@ -217,7 +217,7 @@ resource "aws_iam_policy" "aws_load_balancer_controller_iam_policy" {
 }
 
 module "iam_assumable_role_with_oidc_for_load_balancer_controller" {
-  count = var.install_lb_controller ? 1 : 0
+  count   = var.install_lb_controller ? 1 : 0
   source  = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
   version = "~> 3.0"
 
