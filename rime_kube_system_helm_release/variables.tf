@@ -34,11 +34,11 @@ variable "docker_credentials" {
     docker-email=""
   }]
   EOT
-  type = list(map(string))
+  type        = list(map(string))
 }
 
 variable "docker_registry" {
-  description = "The name of the docker registry holding all of the images for the chart."
+  description = "The name of the Docker registry that holds the images for the chart."
   type        = string
   default     = "docker.io"
 }
@@ -84,6 +84,17 @@ variable "install_lb_controller" {
 
 variable "install_metrics_server" {
   description = "Whether or not to install the metrics server. If you do not install the metrics server, you will not be able to use autoscaling"
+  type        = bool
+  default     = true
+}
+
+variable "manage_namespace" {
+  description = <<EOT
+  Whether or not to manage the namespace we are installing into.
+  This will create the namespace(if applicable), setup docker credentials as a
+  kubernetes secret etc. Turn this flag off if you have trouble connecting to
+  k8s from your terraform environment.
+  EOT
   type        = bool
   default     = true
 }
