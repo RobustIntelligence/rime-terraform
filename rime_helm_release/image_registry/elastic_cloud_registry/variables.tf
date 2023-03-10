@@ -8,6 +8,18 @@ variable "oidc_provider_url" {
   type        = string
 }
 
+variable "repository_prefix" {
+  description = "Prefix used for all repositories created and managed by the RIME Image Registry service. Will also be joined with namespace and resource suffix."
+  type        = string
+  // See https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-create.html
+  // for repository naming rules.
+  validation {
+    condition     = can(regex("^[a-z][a-z0-9]*(?:[/_-][a-z0-9]+)*$", var.repository_prefix))
+    error_message = "The repository prefix must be 1 or more lowercase alphanumeric words separated by a '-', '_', or '/' where the first character is a letter."
+  }
+  default = "rime-managed-images"
+}
+
 variable "resource_name_suffix" {
   description = "A suffix to name the IAM policy and role with."
   type        = string
@@ -24,10 +36,4 @@ variable "resource_name_suffix" {
 variable "tags" {
   description = "A map of tags to add to all resources. Tags added to launch configuration or templates override these values for ASG Tags only."
   type        = map(string)
-}
-
-variable "force_destroy" {
-  description = "Whether or not to force destroy the blob store bucket"
-  type        = bool
-  default     = false
 }
