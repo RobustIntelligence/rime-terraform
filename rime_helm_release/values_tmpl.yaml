@@ -1,59 +1,99 @@
 rime:
+  # Global variables used by all rime services.
   domain: "${domain}"
+  rimeLicense: ${rime_license}
   verbose: ${verbose}
-%{ if length(ip_allowlist) > 0 ~}
-  ipAllowlist:
-%{ for ip in ip_allowlist ~}
-  - ${ip}
-%{ endfor ~}
+
+  # Image parameters for images used by all rime services.
+  images:
+    imagePullSecrets:
+      - name: ${docker_secret_name}
+    backendImage:
+      registry: "${docker_registry}"
+      name: "${docker_image_names.backend}:${version}"
+      pullPolicy: "${pull_policy}"
+    frontendImage:
+      registry: "${docker_registry}"
+      name: "${docker_image_names.frontend}:${version}"
+      pullPolicy: "${pull_policy}"
+    modelTestingImage:
+      registry: "${docker_registry}"
+      name: "${docker_image_names.default_rime_image}:${version}"
+      pullPolicy: "${pull_policy}"
+    imageBuilderImage:
+      registry: "${docker_registry}"
+      name: "${docker_image_names.image_builder}:${version}"
+      pullPolicy: "${pull_policy}"
+
+  datasetManagerServer:
+    enabled: ${blob_store_config.enable}
+    config:
+      storageBucketName: ${blob_store_config.s3_bucket_name}
+      endpoint: "s3.amazonaws.com"
+      type: "s3"
+    serviceAccount:
+      annotations: {
+          eks.amazonaws.com/role-arn: ${blob_store_config.role_arn}
+      }
+
+  imageRegistryServer:
+    enabled: ${image_registry_config != null}
+%{ if image_registry_config != null ~}
+    config:
+      imageRegistry:
+        baseImage:
+          name: "${docker_registry}/${docker_image_names.base_rime_image}"
+          registryType: dockerhub
+%{ if image_registry_config.registry_type == "ecr" ~}
+        ecr:
+          registryID: "${image_registry_config.ecr_config.registry_id}"
+          repositoryPrefix: "${image_registry_config.ecr_config.repository_prefix}"
 %{ endif ~}
-  enableApiKeyAuth: ${enable_api_key_auth}
-  separateModelTestingGroup: ${separate_model_testing_group}
+%{ if image_registry_config.registry_type == "gar" ~}
+        gar:
+          location: "${image_registry_config.gar_config.location}"
+          project: "${image_registry_config.gar_config.project}"
+          repository: "${image_registry_config.gar_config.repository}"
+%{ endif ~}
+    serviceAccount:
+      annotations: {
+        ${ image_registry_config.managed-image-repo-admin-annotation }
+      }
+    imageRegistryJob:
+      dockerSecretName: "${docker_secret_name}"
+      serviceAccount:
+        annotations: {
+          ${ image_registry_config.managed-image-repo-builder-annotation }
+        }
+%{ if separate_model_testing_group ~}
+      tolerations:
+        - key: "dedicated"
+          operator: "Equal"
+          value: "model-testing"
+          effect: "NoSchedule"
+      nodeSelector:
+        dedicated: model-testing
+%{ endif ~}
+%{ endif ~}
 
-userpilotFlow: ${user_pilot_flow}
-rimeJwt: ${rime_jwt}
+%{ if separate_model_testing_group ~}
+  modelTestingServer:
+    modelTestingJob:
+      tolerations:
+        - key: "dedicated"
+          operator: "Equal"
+          value: "model-testing"
+          effect: "NoSchedule"
+      nodeSelector:
+        dedicated: model-testing
+%{ endif ~}
 
-autoscaling:
-  enabled: true
-  minReplicas: 1
-  maxReplicas: 10
-  targetMemoryUtilizationPercentage: 80
-  targetCPUUtilizationPercentage: 80
-replicaCount: 3 #Ignored if autoscaling enabled.
+  ingress:
+    annotations: {
+      external-dns.alpha.kubernetes.io/hostname: "rime.${domain}"
+    }
 
-resources:
-  requests:
-    memory: "100Mi"
-    cpu: "100m"
-  limits:
-    memory: "500Mi"
-    cpu: "500m"
-
-modelTestResources:
-  requests:
-    memory: "4000Mi"
-    cpu: "1500m"
-
-backendImage:
-  name: "${docker_registry}/robustintelligencehq/rime-backend:${version}"
-  pullPolicy: "${pull_policy}"
-
-frontendImage:
-  name: "${docker_registry}/robustintelligencehq/rime-frontend:${version}"
-  pullPolicy: "${pull_policy}"
-
-modelTestImage:
-  # This is the rime-engine configuration for the staging environment.
-  name: "${docker_registry}/robustintelligencehq/rime-testing-engine-dev:${version}"
-  pullPolicy: "${pull_policy}"
-
-firewall:
-  enabled: true
-
-# TODO(blaine): Allow image pull secrets to be customized to the image.
-imagePullSecrets:
-  - name: ${docker_secret_name}
-
+# Mongodb Subchart. See https://artifacthub.io/packages/helm/bitnami/mongodb for all parameters.
 mongodb:
   replicaCount: 1
   image:
@@ -65,59 +105,20 @@ mongodb:
   persistence:
     storageClass: "${storage_class_name}"
     size: "${mongo_db_size}"
-
-# The following overrides are AWS specific.
-imageRegistry:
-  create: ${image_registry_config.registry_type != null}
-%{ if image_registry_config.registry_type != null ~}
-  config:
-    imageRegistry:
-%{ if image_registry_config.registry_type == "ecr" ~}
-      ecr:
-        registryID: "${image_registry_config.ecr_config.registry_id}"
-        repositoryPrefix: "${image_registry_config.ecr_config.repository_prefix}"
-%{ endif ~}
-%{ if image_registry_config.registry_type == "gar" ~}
-      gar:
-        location: "${image_registry_config.gar_config.location}"
-        project: "${image_registry_config.gar_config.project}"
-        repository: "${image_registry_config.gar_config.repository}"
-%{ endif ~}
-  dockerSecretName: "${docker_secret_name}"
-  # Specification of the container image used for running the image builder jobs.
-  image:
-    name: "${docker_registry}/robustintelligencehq/rime-image-builder:${version}"
-    pullPolicy: "${pull_policy}"
-  rbac:
-    serverAccount:
-      # Annotations required to associate the image registry server account
-      # with the AWS IAM role used to create, access and modify RIME's ECR repositories.
-      annotations: {
-        eks.amazonaws.com/role-arn: ${image_registry_config.repo_manager_role_arn}
-      }
-    jobAccount:
-      # Annotations required to associate the image builder job account
-      # with the AWS IAM role used to push and pull images to RIME's ECR repositories.
-      annotations: {
-        eks.amazonaws.com/role-arn: ${image_registry_config.image_builder_role_arn}
-      }
+%{ if enable_mongo_tls ~}
+  tls:
+    image:
+      registry: "${docker_registry}"
+      repository: "robustintelligencehq/mongodb"
+      tag: "5.0.9-debian-11-r7"
+      pullSecrets:
+        - ${docker_secret_name}
+    enabled: true
+    autoGenerated: false
+    existingSecret: ${release_name}-mongo-bitnami-tls
 %{ endif ~}
 
-blobStore:
-  rbac:
-    create: ${blob_store_config.enable}
-    blobStoreAccount:
-      create: ${blob_store_config.enable}
-      # Account used by services that need access to blob storage.
-      # This account has special priveleges to read and write to S3 bucket used for blob storage.
-      annotations: {
-        eks.amazonaws.com/role-arn: ${blob_store_config.role_arn}
-      }
-  # The bucket name of the S3 bucket used as the blob storage.
-  storageBucketName: ${blob_store_config.s3_bucket_name}
-  endpoint: "s3.amazonaws.com"
-  type: "s3"
-
+# Ingress-Nginx controller Subchart. See https://artifacthub.io/packages/helm/ingress-nginx/ingress-nginx for all parameters.
 ingress-nginx:
   imagePullSecrets:
     - name: ${docker_secret_name}
@@ -125,8 +126,8 @@ ingress-nginx:
     image:
       registry: "${docker_registry}"
       image: "robustintelligencehq/ingress-nginx-controller"
-      tag: "v1.3.0"
-      digest: "sha256:067673df26a65ec5c2d5b30f25db869bad4d7d391fc81882250134577e581ef0"
+      tag: "v1.3.1"
+      digest: "sha256:d3642f55a6a7a102a9a579b3382fe73869c73890de4c94f28e36ba5e07925944"
     scope:
       enabled: true
       namespace: ${namespace}
@@ -139,74 +140,68 @@ ingress-nginx:
         service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "tcp"
         service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
         service.beta.kubernetes.io/aws-load-balancer-scheme: "${lb_type}"
-        ${lb_tags}
-  %{ if length(ip_allowlist) > 0 ~}
-        service.beta.kubernetes.io/aws-load-balancer-target-group-attributes: preserve_client_ip.enabled=true
-  %{ endif ~}
-
-kong:
-  image:
-    repository: "${docker_registry}/robustintelligencehq/kong"
-    tag: "2.8"
-    pullSecrets:
-      - ${docker_secret_name}
-  ingressController:
-    image:
-      repository: "${docker_registry}/robustintelligencehq/kong-kubernetes-ingress-controller"
-      tag: "2.2"
-    watchNamespaces:
-      - ${namespace}
-    ingressClass: kong-${namespace}
-  proxy:
-    annotations:
-      service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "${acm_cert_arn}"
-      service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "kong-proxy-tls"
-      service.beta.kubernetes.io/aws-load-balancer-type: "external"
-      service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "*"
-      service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
-      service.beta.kubernetes.io/aws-load-balancer-scheme: "${lb_type}"
-      service.beta.kubernetes.io/aws-load-balancer-alpn-policy: "HTTP2Preferred"
+%{ if length(lb_tags) > 0 ~}
       ${lb_tags}
-  %{ if length(ip_allowlist) > 0 ~}
-      service.beta.kubernetes.io/aws-load-balancer-target-group-attributes: preserve_client_ip.enabled=true
-  %{ endif ~}
+%{ endif ~}
+%{ if length(ip_allowlist) > 0 ~}
+        service.beta.kubernetes.io/aws-load-balancer-target-group-attributes: preserve_client_ip.enabled=true
+%{ endif ~}
 
+# Redis Subchart. See https://artifacthub.io/packages/helm/bitnami/redis for all parameters.
 redis:
   image:
     registry: "${docker_registry}"
     repository: "robustintelligencehq/redis"
     tag: "7.0.4-debian-11-r4"
-    pullSecrets:
-      - ${docker_secret_name}
   master:
     persistence:
       storageClass: "${storage_class_name}"
+%{ if enable_redis_tls ~}
+  tls:
+    enabled: true
+    authClients: true
+    existingSecret: ${release_name}-redis-tls
+    certFilename: "tls.crt"
+    certKeyFilename: "tls.key"
+    certCAFilename: "ca.crt"
+%{ endif ~}
 
-
-datasetManager:
-  useFileUploadService: ${blob_store_config.enable}
-
+# Vault Subchart. See https://github.com/hashicorp/vault-helm for more information.
 vault:
   global:
     imagePullSecrets:
       - name: ${docker_secret_name}
-  injector:
-    image:
-      registry: "docker.io"
-      repository: "robustintelligencehq/vault-k8s"
-      tag: "v1.0"
+    tlsDisable: ${disable_vault_tls}
   server:
+    # Use the opensource image instead of Enterprise Image
     image:
-      registry: "docker.io"
-      repository: "robustintelligencehq/vault"
+      repository: "${docker_registry}/robustintelligencehq/vault"
       tag: "v1.11.3"
+    # Run Vault in "HA" mode.
+    dataStorage:
+      storageClass: "${storage_class_name}"
+%{ if !disable_vault_tls ~}
+    volumes:
+      - name: ${release_name}-vault-tls
+        secret:
+          secretName: ${release_name}-vault-tls
+    volumeMounts:
+      - name: ${release_name}-vault-tls
+        mountPath: "/var/tmp/vault-server-tls"
+        readOnly: true
+%{ endif ~}
     ha:
       raft:
         config: |
           listener "tcp" {
             address = "[::]:8200"
             cluster_address = "[::]:8201"
-            tls_disable = true
+            tls_disable = ${disable_vault_tls}
+%{ if !disable_vault_tls ~}
+            tls_cert_file = "/var/tmp/vault-server-tls/tls.crt"
+            tls_key_file  = "/var/tmp/vault-server-tls/tls.key"
+            tls_client_ca_file = "/var/tmp/vault-server-tls/ca.crt"
+%{ endif ~}
           }
           storage "raft" {
             path = "/vault/data"
@@ -215,3 +210,21 @@ vault:
             }
           }
           service_registration "kubernetes" { }
+
+tls:
+%{ if enable_cert_manager ~}
+  vaultDisabled: ${disable_vault_tls}
+  mongoEnabled: ${enable_mongo_tls}
+  redisEnabled: ${enable_redis_tls}
+  restEnabled: ${enable_rest_tls}
+  grpcEnabled: ${enable_grpc_tls}
+  crossplaneEnabled: ${enable_crossplane_tls}
+%{ else ~}
+  vaultDisabled: true
+  mongoEnabled: false
+  redisEnabled: false
+  restEnabled: false
+  grpcEnabled: false
+  crossplaneEnabled: false
+%{ endif ~}
+  enableCertManager: ${enable_cert_manager}

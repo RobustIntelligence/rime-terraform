@@ -1,3 +1,5 @@
+data "aws_partition" "current" {}
+
 # This policy depends on the set of S3 paths that our service needs access to
 # supplied by the inputs to our terraform module.
 #
@@ -21,7 +23,7 @@ data "aws_iam_policy_document" "eks_s3_access_policy_document" {
       #     arn:aws:s3:::${BUCKET_NAME}
       # where ${BUCKET_NAME} has no '/' separators.
       resources = [
-        replace(statement.value, "/^(arn:aws:s3:::[^/]+)(?:/.*)?$/", "$1"),
+        replace(statement.value, "/^(arn:${data.aws_partition.current.partition}:s3:::[^/]+)(?:/.*)?$/", "$1"),
       ]
 
       # This restricts the list access to only paths matching the given parent directory;
@@ -30,14 +32,14 @@ data "aws_iam_policy_document" "eks_s3_access_policy_document" {
       dynamic "condition" {
         # Only create this prefix if the given path includes at least 1 parent directory.
         # TODO(blaine): This is a hack to use a for_each to do a conditional.
-        for_each = length(regexall("^arn:aws:s3:::[^/]+/[^/]+/.*$", statement.value)) > 0 ? ["dummy_value"] : []
+        for_each = length(regexall("^arn:${data.aws_partition.current.partition}:s3:::[^/]+/[^/]+/.*$", statement.value)) > 0 ? ["dummy_value"] : []
         content {
           test     = "StringLike"
           variable = "s3:prefix"
 
           # Extract the parent directory.
           values = [
-            dirname(replace(statement.value, "/^arn:aws:s3:::[^/]+/(.*)$/", "$1")),
+            "${dirname(replace(statement.value, "/^arn:${data.aws_partition.current.partition}:s3:::[^/]+/(.*)$/", "$1"))}/*",
           ]
         }
       }
