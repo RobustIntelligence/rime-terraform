@@ -5,13 +5,13 @@ locals {
 
   # Bounded by the bucket name length condition of <= 63 so it must be <= 53 as length(rime-blob-) = 10.
   # Because k8s_namespace is <= 12, and resource_name_suffix is <= 25, hash_id is truncated to length 14.
-  bucket_suffix = "${substr(local.hash_id, 0, 14)}-${var.namespace}-${var.resource_name_suffix}"
+  bucket_suffix = "${substr(local.hash_id, 0, 14)}-${var.resource_name_suffix}-${var.namespace}"
 }
 
 resource "aws_s3_bucket" "s3_blob_store_bucket" {
-  bucket = "rime-blob-${local.bucket_suffix}" # must be <= 63
-
-  tags = var.tags
+  bucket        = "rime-blob-${local.bucket_suffix}" # must be <= 63
+  force_destroy = var.force_destroy
+  tags          = var.tags
 }
 
 resource "aws_s3_bucket_versioning" "s3_blob_store_bucket" {
@@ -71,7 +71,7 @@ data "aws_iam_policy_document" "s3_blob_store_access_policy_document" {
 }
 
 resource "aws_iam_policy" "s3_blob_store_access_policy" {
-  name  = "rime_blob_policy_${local.bucket_suffix}" # must be <= 128
+  name = "rime_blob_policy_${local.bucket_suffix}" # must be <= 128
 
   policy = data.aws_iam_policy_document.s3_blob_store_access_policy_document.json
 
@@ -96,7 +96,7 @@ module "iam_assumable_role_with_oidc_for_s3_blob_store" {
   number_of_role_policy_arns = 1
 
   oidc_fully_qualified_subjects = [
-    "system:serviceaccount:${var.namespace}:rime-${var.namespace}-blob-store",
+    "system:serviceaccount:${var.namespace}:rime-${var.namespace}-dataset-manager-server",
   ]
 
   tags = var.tags
