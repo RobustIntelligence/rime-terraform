@@ -26,11 +26,11 @@ variable "docker_credentials" {
     docker-email=""
   }]]
   EOT
-  type = list(map(string))
+  type        = list(map(string))
 }
 
 variable "docker_registry" {
-  description = "The name of the docker registry holding all of the chart images"
+  description = "The name of the Docker registry that holds the chart images"
   type        = string
   default     = "docker.io"
 }
@@ -61,6 +61,17 @@ variable "install_velero" {
   description = "Whether or not to install Velero."
   type        = bool
   default     = false
+}
+
+variable "manage_namespace" {
+  description = <<EOT
+  Whether or not to manage the namespace we are installing into.
+  This will create the namespace(if applicable), setup docker credentials as a
+  kubernetes secret etc. Turn this flag off if you have trouble connecting to
+  k8s from your terraform environment.
+  EOT
+  type        = bool
+  default     = true
 }
 
 variable "oidc_provider_url" {
