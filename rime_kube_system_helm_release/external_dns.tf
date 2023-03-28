@@ -10,7 +10,7 @@ resource "aws_iam_policy" "eks_dns_policy" {
       {
         Action   = "route53:ChangeResourceRecordSets"
         Effect   = "Allow"
-        Resource = ["arn:aws:route53:::hostedzone/*"]
+        Resource = ["arn:${data.aws_partition.current.partition}:route53:::hostedzone/*"]
       },
       {
         Action   = ["route53:ListHostedZones", "route53:ListResourceRecordSets"]
@@ -37,7 +37,7 @@ module "iam_assumable_role_with_oidc_for_route53" {
 
   role_policy_arns = [
     aws_iam_policy.eks_dns_policy[0].arn,
-    "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy",
+    "arn:${data.aws_partition.current.partition}:iam::aws:policy/AmazonEKSClusterPolicy",
   ]
 
   number_of_role_policy_arns = 2

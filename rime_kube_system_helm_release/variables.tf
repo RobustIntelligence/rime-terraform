@@ -34,11 +34,11 @@ variable "docker_credentials" {
     docker-email=""
   }]
   EOT
-  type = list(map(string))
+  type        = list(map(string))
 }
 
 variable "docker_registry" {
-  description = "The name of the docker registry holding all of the images for the chart."
+  description = "The name of the Docker registry that holds the images for the chart."
   type        = string
   default     = "docker.io"
 }
@@ -88,6 +88,17 @@ variable "install_metrics_server" {
   default     = true
 }
 
+variable "manage_namespace" {
+  description = <<EOT
+  Whether or not to manage the namespace we are installing into.
+  This will create the namespace(if applicable), setup docker credentials as a
+  kubernetes secret etc. Turn this flag off if you have trouble connecting to
+  k8s from your terraform environment.
+  EOT
+  type        = bool
+  default     = true
+}
+
 variable "oidc_provider_url" {
   description = "URL to the OIDC provider for IAM assumable roles used by K8s."
   type        = string
@@ -111,4 +122,10 @@ variable "rime_version" {
 variable "tags" {
   description = "A map of tags to add to all resources. Tags added to launch configuration or templates override these values for ASG Tags only."
   type        = map(string)
+}
+
+variable "enable_cert_manager" {
+  description = "enable deployment of cert-manager"
+  type        = bool
+  default     = true
 }
