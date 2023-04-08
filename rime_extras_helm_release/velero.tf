@@ -87,7 +87,7 @@ data "aws_iam_policy_document" "velero_s3_access_policy_document" {
     ]
 
     resources = [
-      "${aws_s3_bucket.velero_s3_bucket[0].arn}",
+      aws_s3_bucket.velero_s3_bucket[0].arn,
     ]
   }
 }
