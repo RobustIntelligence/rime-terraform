@@ -3,21 +3,21 @@
 # NOTE TO DEVELOPERS: do NOT put default values here! Please put those values in the chart's values.yaml file
 %{ endif ~}
 rimeAgent:
-  image:
-    name: "${docker_registry}/${image}:${version}"
+  images:
 %{ if length(image_pull_secret_name) > 0 ~}
-  imagePullSecrets:
-    - name: ${image_pull_secret_name}
+    imagePullSecrets:
+      - name: ${image_pull_secret_name}
 %{ endif ~}
+    agentImage:
+      registry: "${docker_registry}"
+      name: "${image}:${version}"
+    modelTestJobImage:
+      registry: "${docker_registry}"
+      name: "${default_rime_engine_image}:${version}"
 
 %{ if length(job_manager_server_addr) > 0 ~}
   jobManagerAddr: ${ job_manager_server_addr }
 %{ endif ~}
-  
-%{ if length(grpc_web_server_addr) > 0 ~}
-  grpcWebServerAddr: ${ grpc_web_server_addr }
-%{ endif ~}
-
 %{ if length(agent_manager_server_addr) > 0 ~}
   agentManagerAddr: ${ agent_manager_server_addr }
 %{ endif ~}
@@ -31,16 +31,41 @@ rimeAgent:
       annotations: {
         eks.amazonaws.com/role-arn: ${ s3_reader_role_arn }
       }
+%{ if length(upload_server_rest_addr) > 0 ~}
+%{ if enable_crossplane_tls ~}
+    uploadServerAddr: https://${ upload_server_rest_addr }
+%{ else ~}
+    uploadServerAddr: http://${ upload_server_rest_addr }
+%{ endif ~}
+%{ endif ~}
+%{ if length(firewall_server_rest_addr) > 0 ~}
+%{ if enable_crossplane_tls ~}
+    firewallServerAddr: https://${ firewall_server_rest_addr }
+%{ else ~}
+    firewallServerAddr: http://${ firewall_server_rest_addr }
+%{ endif ~}
+%{ endif ~}
+%{ if length(data_collector_rest_addr) > 0 ~}
+%{ if enable_crossplane_tls ~}
+    dataCollectorAddr: https://${ data_collector_rest_addr }
+%{ else ~}
+    dataCollectorAddr: http://${ data_collector_rest_addr }
+%{ endif ~}
+%{ endif ~}
+%{ if length(dataset_manager_server_rest_addr) > 0 ~}
+%{ if enable_crossplane_tls ~}
+    datasetManagerAddr: https://${ dataset_manager_server_rest_addr }
+%{ else ~}
+    datasetManagerAddr: http://${ dataset_manager_server_rest_addr }
+%{ endif ~}
+%{ endif ~}
 
-%{ if length(upload_server_addr) > 0 ~}
-    uploadServerAddr: ${ upload_server_addr }
-%{ endif ~}
-%{ if length(firewall_server_addr) > 0 ~}
-    firewallServerAddr: ${ firewall_server_addr }
-%{ endif ~}
-%{ if length(data_collector_addr) > 0 ~}
-    dataCollectorAddr: ${ data_collector_addr }
-%{ endif ~}
+  datadogTagPodAnnotation: '${datadog_tag_pod_annotation}'
 
-  launcher:
-    requestQueueProxyAddr: ${ request_queue_proxy_addr }
+tls:
+%{ if enable_cert_manager ~}
+  crossplaneEnabled: ${enable_crossplane_tls}
+%{ else ~}
+  crossplaneEnabled: false
+%{ endif ~}
+  enableCertManager: ${enable_cert_manager}
