@@ -37,7 +37,7 @@ data "aws_iam_policy_document" "eks_s3_access_policy_document" {
 
           # Extract the parent directory.
           values = [
-            dirname(replace(statement.value, "/^arn:aws:s3:::[^/]+/(.*)$/", "$1")),
+            "${dirname(replace(statement.value, "/^arn:aws:s3:::[^/]+/(.*)$/", "$1"))}/*",
           ]
         }
       }
